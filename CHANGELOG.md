@@ -2,6 +2,22 @@
 
 Notable AxLang changes are recorded here. Versions follow semantic versioning.
 
+## [0.3.0] - 2026-10-24
+
+### Added
+
+- `axc init` scaffolds an AxLang config and detects common Go, TypeScript, and Python project files.
+- `axc init --with-github-actions` adds a maintained, version-pinned validation workflow.
+- `--force` is required to replace generated files.
+
+### Installation
+
+```sh
+go install github.com/vivek5200/axlang/cmd/axc@v0.3.0
+go install github.com/vivek5200/axlang/cmd/axls@v0.3.0
+docker pull ghcr.io/vivek5200/axlang:v0.3.0
+```
+
 ## [0.2.1] - 2026-10-24
 
 ### Added

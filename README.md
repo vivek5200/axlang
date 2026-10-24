@@ -27,8 +27,8 @@ See the [changelog](CHANGELOG.md) for release history.
 AxLang is also distributed as a multi-platform container image through GitHub Container Registry:
 
 ```sh
-docker pull ghcr.io/vivek5200/axlang:v0.2.1
-docker run --rm -v "$PWD:/workspace" -w /workspace ghcr.io/vivek5200/axlang:v0.2.1 check Astrixfile.ax
+docker pull ghcr.io/vivek5200/axlang:v0.3.0
+docker run --rm -v "$PWD:/workspace" -w /workspace ghcr.io/vivek5200/axlang:v0.3.0 check Astrixfile.ax
 ```
 
 The image includes both `axc` and `axls`; `axc` is the default entry point. Run the language server with `--entrypoint /usr/local/bin/axls` and keep stdin attached for LSP clients. New version tags publish matching image tags and update `latest`.
@@ -109,6 +109,23 @@ axc fmt --write Astrixfile.ax
 axc emit-ir Astrixfile.ax
 axc emit-rego Astrixfile.ax
 ```
+
+## Start a project
+
+Run `axc init` from the repository root to create a minimal `Astrixfile.ax`. AxLang detects common Go, TypeScript, and Python project files to prefill the `languages` list. It will not overwrite an existing config.
+
+```sh
+axc init
+axc check Astrixfile.ax
+```
+
+To also add a GitHub Actions workflow that installs a pinned AxLang release and validates the config on pushes and pull requests:
+
+```sh
+axc init --with-github-actions
+```
+
+Use `--force` only when you want to replace generated files, and pass a path to write the config somewhere other than `Astrixfile.ax`.
 
 `check`, `emit-ir`, and `emit-rego` run parsing and semantic validation. The runtime IR keeps stage prerequisites in each stage's `after` list.
 
