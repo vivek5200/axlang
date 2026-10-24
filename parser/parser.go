@@ -36,7 +36,7 @@ func (p *Parser) Parse() (*ast.File, []Diagnostic) {
 		return &ast.File{Filename: p.filename}, p.diags
 	}
 	p.tokens = tokens
-	file := &ast.File{Filename: p.filename}
+	file := &ast.File{Filename: p.filename, Comments: collectComments(p.source)}
 	for !p.at(token.EOF) {
 		start := p.pos
 		decl, err := p.parseDecl()
@@ -49,6 +49,41 @@ func (p *Parser) Parse() (*ast.File, []Diagnostic) {
 		file.Decls = append(file.Decls, decl)
 	}
 	return file, p.diags
+}
+
+func collectComments(source string) []ast.Comment {
+	var comments []ast.Comment
+	inString := false
+	for offset := 0; offset < len(source); {
+		if inString {
+			switch source[offset] {
+			case '\\':
+				offset += 2
+			case '"':
+				inString = false
+				offset++
+			default:
+				offset++
+			}
+			continue
+		}
+		if source[offset] == '"' {
+			inString = true
+			offset++
+			continue
+		}
+		if source[offset] == '/' && offset+1 < len(source) && source[offset+1] == '/' {
+			start := offset
+			offset += 2
+			for offset < len(source) && source[offset] != '\n' && source[offset] != '\r' {
+				offset++
+			}
+			comments = append(comments, ast.Comment{Text: source[start:offset], Offset: start})
+			continue
+		}
+		offset++
+	}
+	return comments
 }
 
 func (p *Parser) parseDecl() (ast.Decl, error) {
@@ -90,6 +125,14 @@ func (p *Parser) parseStage() (ast.Decl, error) {
 	if err != nil {
 		return nil, err
 	}
+	var dependencies []ast.StageDependency
+	if p.at(token.After) {
+		p.take()
+		dependencies, err = p.parseStageReferences("after")
+		if err != nil {
+			return nil, err
+		}
+	}
 	if _, err = p.expect(token.LBrace, "'{' after stage name"); err != nil {
 		return nil, err
 	}
@@ -97,7 +140,7 @@ func (p *Parser) parseStage() (ast.Decl, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ast.StageDecl{Name: name.Value, Fields: fields, Source: join(start.Span, end.Span)}, nil
+	return &ast.StageDecl{Name: name.Value, AfterStages: dependencies, Fields: fields, Source: join(start.Span, end.Span)}, nil
 }
 
 func (p *Parser) parseGuardrail() (ast.Decl, error) {
@@ -206,9 +249,12 @@ func (p *Parser) parseDeploy() (ast.Decl, error) {
 	if _, err = p.expect(token.After, "'after' after deploy name"); err != nil {
 		return nil, err
 	}
-	stage, _, err := p.parseStageReference("after")
+	stages, err := p.parseStageReferences("after")
 	if err != nil {
 		return nil, err
+	}
+	if len(stages) != 1 {
+		return nil, p.fail(p.current(), "deploy requires exactly one stage dependency", "use after(stage.verify)")
 	}
 	if _, err = p.expect(token.LBrace, "'{' after deploy dependency"); err != nil {
 		return nil, err
@@ -243,7 +289,33 @@ func (p *Parser) parseDeploy() (ast.Decl, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ast.DeployDecl{Name: name.Value, AfterStage: stage, Fields: fields, Rollback: rollback, Source: join(start.Span, end.Span)}, nil
+	return &ast.DeployDecl{Name: name.Value, AfterStage: stages[0].Name, Fields: fields, Rollback: rollback, Source: join(start.Span, end.Span)}, nil
+}
+
+func (p *Parser) parseStageReferences(context string) ([]ast.StageDependency, error) {
+	if _, err := p.expect(token.LParen, "'(' before stage reference"); err != nil {
+		return nil, err
+	}
+	var dependencies []ast.StageDependency
+	for {
+		ref := p.current()
+		if ref.Kind != token.Ident {
+			return nil, p.fail(ref, fmt.Sprintf("expected stage.<name> in %s reference", context), "reference a declared stage, for example stage.verify")
+		}
+		p.take()
+		if !strings.HasPrefix(ref.Text, "stage.") || len(ref.Text) == len("stage.") {
+			return nil, p.fail(ref, fmt.Sprintf("expected stage.<name> in %s reference", context), "reference a declared stage, for example stage.verify")
+		}
+		dependencies = append(dependencies, ast.StageDependency{Name: strings.TrimPrefix(ref.Text, "stage."), Source: ref.Span})
+		if !p.at(token.Comma) {
+			break
+		}
+		p.take()
+	}
+	if _, err := p.expect(token.RParen, "')' after stage reference"); err != nil {
+		return nil, err
+	}
+	return dependencies, nil
 }
 
 func (p *Parser) parseStageReference(context string) (string, token.Span, error) {

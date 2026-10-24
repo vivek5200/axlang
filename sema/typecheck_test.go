@@ -39,6 +39,32 @@ func TestAX002StageReferences(t *testing.T) {
 	}
 }
 
+func TestAX002ValidStageDependencyDAG(t *testing.T) {
+	d := checkFixture(t, `stage "unit" {} stage "lint" {} stage "integration" after(stage.unit, stage.lint) {} stage "e2e" after(stage.integration) {}`)
+	if len(d) != 0 {
+		t.Fatalf("unexpected diagnostics for valid stage DAG: %#v", d)
+	}
+}
+
+func TestAX002RejectsStageDependencyCycles(t *testing.T) {
+	d := checkFixture(t, `stage "a" after(stage.b) {} stage "b" after(stage.c) {} stage "c" after(stage.a) {} stage "downstream" after(stage.a) {}`)
+	if len(d) != 3 {
+		t.Fatalf("diagnostics=%#v, want one AX002 for each cyclic stage and none for downstream", d)
+	}
+	for _, diagnostic := range d {
+		if diagnostic.Code != "AX002" || diagnostic.Span.Length == 0 {
+			t.Fatalf("cycle diagnostic missing AX002 or stage span: %#v", diagnostic)
+		}
+	}
+}
+
+func TestAX002RejectsUndeclaredStagePrerequisite(t *testing.T) {
+	d := checkFixture(t, `stage "integration" after(stage.missing) {}`)
+	if len(d) != 1 || d[0].Code != "AX002" || d[0].Span.Line != 1 {
+		t.Fatalf("diagnostics=%#v, want AX002 at dependency reference", d)
+	}
+}
+
 func TestAX003MetricUnits(t *testing.T) {
 	source := `stage "s" {} deploy "d" after(stage.s) { steps = [100%] rollback on { metrics.p95_latency > 5% or metrics.http_5xx_rate > 2s or metrics.p95_latency == 1 } }`
 	d := checkFixture(t, source)

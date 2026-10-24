@@ -18,11 +18,16 @@ func Check(file *ast.File) []parser.Diagnostic {
 	}
 	var diagnostics []parser.Diagnostic
 	stages := map[string]bool{}
+	stageDecls := map[string]*ast.StageDecl{}
+	stageOrder := make([]string, 0)
 	for _, decl := range file.Decls {
 		if d, ok := decl.(*ast.StageDecl); ok {
 			stages[d.Name] = true
+			stageDecls[d.Name] = d
+			stageOrder = append(stageOrder, d.Name)
 		}
 	}
+	diagnostics = append(diagnostics, checkStageDependencies(stageDecls, stageOrder, stages)...)
 	for _, decl := range file.Decls {
 		switch d := decl.(type) {
 		case *ast.HealDecl:
@@ -60,6 +65,61 @@ func Check(file *ast.File) []parser.Diagnostic {
 				diagnostics = append(diagnostics, checkExpr(r.Condition)...)
 			}
 		}
+	}
+	return diagnostics
+}
+
+func checkStageDependencies(stageDecls map[string]*ast.StageDecl, stageOrder []string, stages map[string]bool) []parser.Diagnostic {
+	var diagnostics []parser.Diagnostic
+	for _, name := range stageOrder {
+		stage := stageDecls[name]
+		for _, dependency := range stage.AfterStages {
+			if !stages[dependency.Name] {
+				diagnostics = append(diagnostics, diag("AX002", fmt.Sprintf("stage %q references undeclared stage %q", stage.Name, dependency.Name), dependency.Source, "declare that stage before relying on it as a prerequisite"))
+			}
+		}
+	}
+
+	// A three-color depth-first traversal identifies the actual nodes in each
+	// cycle, without misreporting stages that merely depend on a cycle.
+	state := map[string]uint8{}
+	path := make([]string, 0, len(stageDecls))
+	pathIndex := map[string]int{}
+	cycleMembers := map[string]bool{}
+	var visit func(string)
+	visit = func(name string) {
+		state[name] = 1
+		pathIndex[name] = len(path)
+		path = append(path, name)
+		stage := stageDecls[name]
+		for _, dependency := range stage.AfterStages {
+			if stageDecls[dependency.Name] == nil {
+				continue
+			}
+			switch state[dependency.Name] {
+			case 0:
+				visit(dependency.Name)
+			case 1:
+				for _, member := range path[pathIndex[dependency.Name]:] {
+					cycleMembers[member] = true
+				}
+			}
+		}
+		path = path[:len(path)-1]
+		delete(pathIndex, name)
+		state[name] = 2
+	}
+	for _, name := range stageOrder {
+		if state[name] == 0 {
+			visit(name)
+		}
+	}
+	for _, name := range stageOrder {
+		if !cycleMembers[name] {
+			continue
+		}
+		stage := stageDecls[name]
+		diagnostics = append(diagnostics, diag("AX002", fmt.Sprintf("stage dependency cycle includes %q", name), stage.Span(), "remove a dependency edge to make the stage graph acyclic"))
 	}
 	return diagnostics
 }

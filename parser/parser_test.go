@@ -66,6 +66,21 @@ func TestPrattPrecedenceAndGrouping(t *testing.T) {
 	}
 }
 
+func TestStageDependenciesAcceptOneOrMorePrerequisites(t *testing.T) {
+	source := `stage "integration" after(stage.unit, stage.lint) { scope = ast.blast_radius } stage "unit" {} stage "lint" {}`
+	file, diags := New("stages.ax", source).Parse()
+	if len(diags) != 0 {
+		t.Fatalf("diagnostics: %#v", diags)
+	}
+	stage := file.Decls[0].(*ast.StageDecl)
+	if len(stage.AfterStages) != 2 || stage.AfterStages[0].Name != "unit" || stage.AfterStages[1].Name != "lint" {
+		t.Fatalf("dependencies = %#v", stage.AfterStages)
+	}
+	if stage.AfterStages[0].Source.Length == 0 || stage.AfterStages[1].Source.Length == 0 {
+		t.Fatalf("dependency source spans were not retained: %#v", stage.AfterStages)
+	}
+}
+
 func TestParserRecoversAtNextTopLevelDeclaration(t *testing.T) {
 	source := "stage \"broken\" { scope ast.blast_radius }\nstage \"valid\" { network = \"none\" }"
 	file, diags := New("recover.ax", source).Parse()

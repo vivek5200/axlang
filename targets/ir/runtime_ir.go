@@ -30,6 +30,7 @@ type RulePlan struct {
 }
 type StagePlan struct {
 	Name   string      `json:"name"`
+	After  []string    `json:"after,omitempty"`
 	Fields []FieldPlan `json:"fields,omitempty"`
 }
 type HealPlan struct {
@@ -89,7 +90,11 @@ func FromAST(file *ast.File) ExecutionPlan {
 			}
 			plan.Guardrails = append(plan.Guardrails, g)
 		case *ast.StageDecl:
-			plan.Stages = append(plan.Stages, StagePlan{Name: d.Name, Fields: fields(d.Fields)})
+			stage := StagePlan{Name: d.Name, Fields: fields(d.Fields)}
+			for _, dependency := range d.AfterStages {
+				stage.After = append(stage.After, dependency.Name)
+			}
+			plan.Stages = append(plan.Stages, stage)
 		case *ast.HealDecl:
 			h := HealPlan{Name: d.Name, OnFailure: d.OnFailure, Fields: fields(d.Fields)}
 			if d.Allow != nil {

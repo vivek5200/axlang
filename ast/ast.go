@@ -10,6 +10,13 @@ type Node interface{ Span() token.Span }
 type File struct {
 	Filename string
 	Decls    []Decl
+	Comments []Comment
+}
+
+// Comment retains a line comment's text and byte offset for source-preserving formatting.
+type Comment struct {
+	Text   string
+	Offset int
 }
 
 // Decl is any top-level declaration.
@@ -49,13 +56,20 @@ const (
 )
 
 type StageDecl struct {
-	Name   string
-	Fields []Field
-	Source token.Span
+	Name        string
+	AfterStages []StageDependency
+	Fields      []Field
+	Source      token.Span
 }
 
 func (*StageDecl) declarationNode()   {}
 func (d *StageDecl) Span() token.Span { return d.Source }
+
+// StageDependency names a prerequisite stage and retains the source span of its reference.
+type StageDependency struct {
+	Name   string
+	Source token.Span
+}
 
 type HealDecl struct {
 	Name      string

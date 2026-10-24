@@ -46,7 +46,30 @@ func TestFormatEmptyFile(t *testing.T) {
 	if len(diags) != 0 {
 		t.Fatal(diags)
 	}
-	if got := Format(file); got != "" {
-		t.Fatalf("Format(empty)=%q", got)
+	if got := Format(file); got != "// comment-only file\n" {
+		t.Fatalf("Format(comment-only)=%q", got)
+	}
+}
+
+func TestFormatPreservesStageDependencies(t *testing.T) {
+	file, diags := parser.New("stages.ax", `stage "integration" after(stage.unit, stage.lint) { scope = ast.blast_radius }`).Parse()
+	if len(diags) != 0 {
+		t.Fatal(diags)
+	}
+	got := Format(file)
+	want := "stage \"integration\" after(stage.unit, stage.lint) {\n  scope = ast.blast_radius\n}\n"
+	if got != want {
+		t.Fatalf("Format() = %q, want %q", got, want)
+	}
+}
+
+func TestFormatPreservesLineComments(t *testing.T) {
+	file, diags := parser.New("comments.ax", "// keep this note\nstage \"verify\" {}\n").Parse()
+	if len(diags) != 0 {
+		t.Fatal(diags)
+	}
+	got := Format(file)
+	if !strings.HasPrefix(got, "// keep this note\n\nstage \"verify\" {\n}\n") {
+		t.Fatalf("Format() dropped or misplaced a leading comment: %q", got)
 	}
 }

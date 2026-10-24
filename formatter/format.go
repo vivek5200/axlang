@@ -15,14 +15,33 @@ func Format(file *ast.File) string {
 		return ""
 	}
 	var out strings.Builder
-	for i, decl := range file.Decls {
-		if i > 0 {
+	commentIndex := 0
+	wroteDecl := false
+	for _, decl := range file.Decls {
+		if wroteDecl {
+			out.WriteByte('\n')
+		}
+		commentsAdded := false
+		for commentIndex < len(file.Comments) && file.Comments[commentIndex].Offset < decl.Span().Offset {
+			out.WriteString(strings.TrimSpace(file.Comments[commentIndex].Text))
+			out.WriteByte('\n')
+			commentIndex++
+			commentsAdded = true
+		}
+		if commentsAdded {
 			out.WriteByte('\n')
 		}
 		formatDecl(&out, decl)
+		wroteDecl = true
 	}
-	if len(file.Decls) > 0 {
-		out.WriteByte('\n')
+	if commentIndex < len(file.Comments) {
+		if wroteDecl {
+			out.WriteByte('\n')
+		}
+		for ; commentIndex < len(file.Comments); commentIndex++ {
+			out.WriteString(strings.TrimSpace(file.Comments[commentIndex].Text))
+			out.WriteByte('\n')
+		}
 	}
 	return out.String()
 }
@@ -38,6 +57,17 @@ func formatDecl(out *strings.Builder, decl ast.Decl) {
 	case *ast.StageDecl:
 		out.WriteString("stage ")
 		quoted(out, d.Name)
+		if len(d.AfterStages) > 0 {
+			out.WriteString(" after(")
+			for i, dependency := range d.AfterStages {
+				if i > 0 {
+					out.WriteString(", ")
+				}
+				out.WriteString("stage.")
+				out.WriteString(dependency.Name)
+			}
+			out.WriteByte(')')
+		}
 		out.WriteString(" {\n")
 		formatFields(out, d.Fields, 1, true)
 		out.WriteString("}\n")
