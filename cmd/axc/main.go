@@ -179,13 +179,21 @@ func detectLanguages(root string) []string {
 		name  string
 	}{
 		{files: []string{"go.mod"}, name: "go"},
-		{files: []string{"package.json", "tsconfig.json"}, name: "typescript"},
-		{files: []string{"pyproject.toml", "requirements.txt", "setup.py"}, name: "python"},
+		{files: []string{"tsconfig.json"}, name: "typescript"},
+		{files: []string{"package.json"}, name: "javascript"},
+		{files: []string{"pyproject.toml", "requirements.txt", "setup.py", "Pipfile"}, name: "python"},
+		{files: []string{"Cargo.toml"}, name: "rust"},
+		{files: []string{"pom.xml", "build.gradle", "build.gradle.kts"}, name: "java"},
+		{files: []string{"*.sln", "*.csproj"}, name: "csharp"},
+		{files: []string{"composer.json"}, name: "php"},
+		{files: []string{"Gemfile"}, name: "ruby"},
+		{files: []string{"CMakeLists.txt", "Makefile"}, name: "c/c++"},
 	}
 	var languages []string
 	for _, check := range checks {
 		for _, name := range check.files {
-			if _, err := os.Stat(filepath.Join(root, name)); err == nil {
+			matches, _ := filepath.Glob(filepath.Join(root, name))
+			if len(matches) > 0 {
 				languages = append(languages, check.name)
 				break
 			}

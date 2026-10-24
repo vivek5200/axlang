@@ -112,7 +112,7 @@ axc emit-rego Astrixfile.ax
 
 ## Start a project
 
-Run `axc init` from the repository root to create a minimal `Astrixfile.ax`. AxLang detects common Go, TypeScript, and Python project files to prefill the `languages` list. It will not overwrite an existing config.
+Run `axc init` from the repository root to create a minimal `Astrixfile.ax`. AxLang detects common Go, JavaScript/TypeScript, Python, Rust, Java, C#, PHP, Ruby, and C/C++ project markers to prefill the informational `languages` list. AxLang configuration itself is project-agnostic; Astrix's parser and test-runner support depends on its language adapters and project test command. `axc init` will not overwrite an existing config.
 
 ```sh
 axc init
