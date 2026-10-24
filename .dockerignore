@@ -1,0 +1,7 @@
+.git
+.github
+editors
+**/*_test.go
+coverage.out
+dist
+node_modules

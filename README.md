@@ -22,6 +22,17 @@ go build -o axls ./cmd/axls
 
 See the [changelog](CHANGELOG.md) for release history.
 
+## Container image
+
+AxLang is also distributed as a multi-platform container image through GitHub Container Registry:
+
+```sh
+docker pull ghcr.io/vivek5200/axlang:v0.2.1
+docker run --rm -v "$PWD:/workspace" -w /workspace ghcr.io/vivek5200/axlang:v0.2.1 check Astrixfile.ax
+```
+
+The image includes both `axc` and `axls`; `axc` is the default entry point. Run the language server with `--entrypoint /usr/local/bin/axls` and keep stdin attached for LSP clients. New version tags publish matching image tags and update `latest`.
+
 ## Language tour
 
 ```hcl

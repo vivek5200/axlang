@@ -2,6 +2,19 @@
 
 Notable AxLang changes are recorded here. Versions follow semantic versioning.
 
+## [0.2.1] - 2026-10-24
+
+### Added
+
+- Multi-platform GitHub Container Registry images containing `axc` and `axls`.
+- Tag-triggered GitHub Actions publishing for versioned images and `latest`.
+
+### Installation
+
+```sh
+docker pull ghcr.io/vivek5200/axlang:v0.2.1
+```
+
 ## [0.2.0] - 2026-10-24
 
 ### Added
