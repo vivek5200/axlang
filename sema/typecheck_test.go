@@ -5,6 +5,42 @@ import (
 	"testing"
 )
 
+func TestTC_SEMA_01_AX005RejectsUnsafeMounts(t *testing.T) {
+	unsafe := []string{"/:/host:rw", "/:/mnt:ro", "/etc:/etc:ro", "/var/run/docker.sock:/var/run/docker.sock", "~/.ssh:/root/.ssh:ro", "~/.aws:/root/.aws:ro", "relative/path:/container:ro", "invalid_mount_format"}
+	for _, mount := range unsafe {
+		t.Run(mount, func(t *testing.T) {
+			source := `stage "verify" { mounts = ["` + mount + `"] }`
+			file, parseDiags := parser.New("unsafe.ax", source).Parse()
+			if len(parseDiags) > 0 {
+				t.Fatalf("fixture parse: %+v", parseDiags)
+			}
+			diags := Check(file)
+			found := false
+			for _, d := range diags {
+				if d.Code == "AX005" {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("expected AX005 for %q; got %+v", mount, diags)
+			}
+		})
+	}
+}
+
+func TestTC_SEMA_02_AllowsSafeDependencyMounts(t *testing.T) {
+	source := `stage "verify" { mounts = ["~/.cargo:/root/.cargo:ro", "~/.m2:/root/.m2:ro", ".venv:/workspace/.venv:ro"] }`
+	file, parseDiags := parser.New("safe.ax", source).Parse()
+	if len(parseDiags) > 0 {
+		t.Fatalf("fixture parse: %+v", parseDiags)
+	}
+	for _, d := range Check(file) {
+		if d.Code == "AX005" {
+			t.Fatalf("safe mount rejected: %+v", d)
+		}
+	}
+}
+
 func checkFixture(t *testing.T, source string) []parser.Diagnostic {
 	t.Helper()
 	file, parseDiags := parser.New("test.ax", source).Parse()

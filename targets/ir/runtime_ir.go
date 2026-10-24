@@ -29,9 +29,12 @@ type RulePlan struct {
 	Condition ExprPlan `json:"condition"`
 }
 type StagePlan struct {
-	Name   string      `json:"name"`
-	After  []string    `json:"after,omitempty"`
-	Fields []FieldPlan `json:"fields,omitempty"`
+	Name    string      `json:"name"`
+	After   []string    `json:"after,omitempty"`
+	Fields  []FieldPlan `json:"fields,omitempty"`
+	Image   string      `json:"image,omitempty"`
+	Command string      `json:"command,omitempty"`
+	Mounts  []string    `json:"mounts,omitempty"`
 }
 type HealPlan struct {
 	Name      string      `json:"name"`
@@ -91,6 +94,16 @@ func FromAST(file *ast.File) ExecutionPlan {
 			plan.Guardrails = append(plan.Guardrails, g)
 		case *ast.StageDecl:
 			stage := StagePlan{Name: d.Name, Fields: fields(d.Fields)}
+			for _, field := range d.Fields {
+				switch field.Name {
+				case "image":
+					stage.Image = stringField(field.Value)
+				case "command":
+					stage.Command = stringField(field.Value)
+				case "mounts":
+					stage.Mounts = stringListField(field.Value)
+				}
+			}
 			for _, dependency := range d.AfterStages {
 				stage.After = append(stage.After, dependency.Name)
 			}
@@ -112,6 +125,26 @@ func FromAST(file *ast.File) ExecutionPlan {
 		}
 	}
 	return plan
+}
+
+func stringField(e ast.Expr) string {
+	if v, ok := e.(*ast.LiteralExpr); ok && v.Kind == token.String {
+		return v.Value
+	}
+	return ""
+}
+func stringListField(e ast.Expr) []string {
+	list, ok := e.(*ast.ListExpr)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(list.Elements))
+	for _, item := range list.Elements {
+		if value := stringField(item); value != "" {
+			out = append(out, value)
+		}
+	}
+	return out
 }
 
 func fields(in []ast.Field) []FieldPlan {

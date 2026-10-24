@@ -3,6 +3,7 @@ package sema
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -65,8 +66,63 @@ func Check(file *ast.File) []parser.Diagnostic {
 				diagnostics = append(diagnostics, checkExpr(r.Condition)...)
 			}
 		}
+		if d, ok := decl.(*ast.StageDecl); ok {
+			if field, exists := findField(d.Fields, "mounts"); exists {
+				list, valid := field.Value.(*ast.ListExpr)
+				if !valid || len(list.Elements) == 0 {
+					diagnostics = append(diagnostics, diag("AX005", "mounts must be a list of safe host:container[:ro|rw] strings", field.Span(), "use project-relative dependency folders or explicit non-sensitive cache paths"))
+				} else {
+					for _, item := range list.Elements {
+						lit, ok := item.(*ast.LiteralExpr)
+						if !ok || lit.Kind != token.String || !safeMount(lit.Value) {
+							span := field.Span()
+							if ok {
+								span = lit.Span()
+							}
+							diagnostics = append(diagnostics, diag("AX005", "Unsafe sandbox host mount", span, "mount only project dependencies or non-sensitive cache directories; avoid root, credentials, system paths, and Docker sockets"))
+						}
+					}
+				}
+			}
+		}
 	}
 	return diagnostics
+}
+
+func safeMount(value string) bool {
+	parts := strings.Split(value, ":")
+	if len(parts) < 2 || len(parts) > 3 {
+		return false
+	}
+	host, container := parts[0], parts[1]
+	if host == "" || container == "" || !strings.HasPrefix(container, "/") {
+		return false
+	}
+	if filepath.Clean(container) != container || strings.Contains(container, "/../") || strings.HasSuffix(container, "/..") {
+		return false
+	}
+	if len(parts) == 3 && parts[2] != "ro" && parts[2] != "rw" {
+		return false
+	}
+	if host == "/" || strings.HasPrefix(host, "relative/") || !filepath.IsAbs(host) && !strings.HasPrefix(host, "~/") && !strings.HasPrefix(host, "./") && !strings.HasPrefix(host, ".venv") && !strings.HasPrefix(host, "venv") {
+		return false
+	}
+	clean := filepath.Clean(strings.TrimPrefix(host, "~/"))
+	if clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
+		return false
+	}
+	for _, blocked := range []string{".ssh", ".aws", ".config/gcloud", "etc", "var/run/docker.sock", "proc", "sys", "dev"} {
+		if clean == blocked || strings.HasPrefix(clean, blocked+string(filepath.Separator)) {
+			return false
+		}
+	}
+	if strings.HasSuffix(clean, string(filepath.Separator)+".ssh") || strings.HasSuffix(clean, string(filepath.Separator)+".aws") || strings.Contains(host, "docker.sock") {
+		return false
+	}
+	if strings.HasPrefix(host, "/etc") || strings.HasPrefix(host, "/var/run/docker.sock") || host == "/var" || host == "/proc" || host == "/sys" || host == "/dev" {
+		return false
+	}
+	return true
 }
 
 func checkStageDependencies(stageDecls map[string]*ast.StageDecl, stageOrder []string, stages map[string]bool) []parser.Diagnostic {
