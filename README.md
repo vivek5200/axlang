@@ -67,6 +67,8 @@ deploy "canary" after(stage.integration) {
 
 The parser uses a linear hand-written lexer, recursive descent for declarations, and Pratt parsing for expressions. Static checks include stage reference integrity and cycle rejection (`AX002`), heal attempt bounds (`AX001`), metric unit consistency (`AX003`), and monotonic canary percentages ending at `100%` (`AX004`).
 
+Guardrails may use `require_approval when { ... }` to express actions that need human approval; AxLang compiles this policy for evaluation by Astrix's OPA gate. The current Astrix CLI fails closed when approval is required, but does not yet send operator notifications or provide an approval inbox. Integrators can route the decision through their CI or deployment platform and require authenticated human approval before resuming.
+
 ## EBNF
 
 The grammar below describes the supported declaration and expression forms. Field values are expressions; semantic checks constrain fields such as `max_attempts` and `steps`.
