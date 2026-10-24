@@ -1,0 +1,36 @@
+// Astrixfile.ax — canonical Astrix self-check configuration
+
+workspace "core-platform" {
+  languages = ["go", "typescript"]
+  cache     = "s3://astrix-remote-cache"
+}
+
+guardrail "security_boundaries" {
+  deny when {
+    actor.type == "autonomous_llm" and diff.touches("internal/auth/**", "migrations/**")
+  }
+  require_approval when {
+    target.env == "production" or diff.touches("infra/**")
+  }
+}
+
+stage "verify" {
+  scope                = ast.blast_radius
+  quarantine_threshold = 0.05
+  network              = "none"
+}
+
+heal "triage_loop" on failure(stage.verify) {
+  model        = "qwen/qwen-2.5-coder-32b-instruct"
+  max_attempts = 3
+  allow when {
+    actor.type == "autonomous_llm" and diff.modifies_tests("false")
+  }
+}
+
+deploy "prod_canary" after(stage.verify) {
+  steps = [1%, 5%, 25%, 100%] every 2m
+  rollback on {
+    metrics.p95_latency > 250ms or metrics.http_5xx_rate > 0.5%
+  }
+}
