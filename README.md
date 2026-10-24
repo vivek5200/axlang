@@ -20,6 +20,8 @@ go build -o axc ./cmd/axc
 go build -o axls ./cmd/axls
 ```
 
+See the [changelog](CHANGELOG.md) for release history.
+
 ## Language tour
 
 ```hcl
