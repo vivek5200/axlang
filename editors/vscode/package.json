@@ -1,0 +1,47 @@
+{
+  "name": "axlang",
+  "displayName": "AxLang",
+  "description": "AxLang language support with diagnostics, Rego previews, and formatting via axls.",
+  "version": "0.1.0",
+  "publisher": "vivek5200",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Programming Languages", "Formatters"],
+  "main": "./extension.js",
+  "activationEvents": ["onLanguage:axlang"],
+  "configurationDefaults": {
+    "[axlang]": {
+      "editor.defaultFormatter": "vivek5200.axlang",
+      "editor.formatOnSave": true
+    }
+  },
+  "contributes": {
+    "languages": [{
+      "id": "axlang",
+      "aliases": ["AxLang", "axlang"],
+      "extensions": [".ax"],
+      "filenames": ["Astrixfile.ax"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "axlang",
+      "scopeName": "source.axlang",
+      "path": "./syntaxes/axlang.tmLanguage.json"
+    }],
+    "configuration": {
+      "title": "AxLang",
+      "properties": {
+        "axlang.server.path": {
+          "type": "string",
+          "default": "axls",
+          "description": "Path to the axls language server executable."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

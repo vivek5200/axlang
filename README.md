@@ -112,7 +112,7 @@ axc emit-rego Astrixfile.ax
 
 ## Language server and editor
 
-Build `axls` and make it available on `PATH`, then install the extension from `editors/vscode` in the workspace checkout (or package it with `vsce`). The extension also accepts a custom executable path under **AxLang: Server: Path**.
+Build `axls` and make it available on `PATH`, then install the extension from [`editors/vscode`](editors/vscode) (or package it with `vsce`). The extension also accepts a custom executable path under **AxLang: Server: Path**.
 
 The server uses LSP JSON-RPC over stdio and supports full document synchronization, parser and semantic diagnostics, generated Rego hover cards on guardrail/heal headers, domain-type hover for metrics and unit literals, and document formatting.
 

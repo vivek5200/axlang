@@ -1,0 +1,59 @@
+{
+  "scopeName": "source.axlang",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#domain-literals" },
+    { "include": "#keywords" },
+    { "include": "#booleans" },
+    { "include": "#dotted-identifiers" },
+    { "include": "#numbers" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        { "name": "comment.line.double-slash.axlang", "match": "//.*$" }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.axlang",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        { "name": "constant.character.escape.axlang", "match": "\\\\[\\\\\"nrt]" }
+      ]
+    },
+    "domain-literals": {
+      "patterns": [
+        { "name": "constant.numeric.duration.axlang", "match": "\\b[0-9]+(?:\\.[0-9]+)?(?:ms|s|m|h)\\b" },
+        { "name": "constant.numeric.percentage.axlang", "match": "\\b[0-9]+(?:\\.[0-9]+)?%" }
+      ]
+    },
+    "keywords": {
+      "name": "keyword.control.axlang",
+      "match": "\\b(?:workspace|guardrail|stage|heal|deploy|deny|allow|require_approval|when|on|failure|after|every|rollback|and|or)\\b"
+    },
+    "booleans": {
+      "name": "constant.language.boolean.axlang",
+      "match": "\\b(?:true|false)\\b"
+    },
+    "dotted-identifiers": {
+      "name": "variable.other.qualified.axlang",
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)+\\b"
+    },
+    "numbers": {
+      "name": "constant.numeric.axlang",
+      "match": "\\b[0-9]+(?:\\.[0-9]+)?\\b"
+    },
+    "operators": {
+      "name": "keyword.operator.axlang",
+      "match": "==|!=|<=|>=|=|<|>|-"
+    },
+    "punctuation": {
+      "name": "punctuation.separator.axlang",
+      "match": "[{}(),\\[\\]]"
+    }
+  }
+}
