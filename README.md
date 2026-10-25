@@ -4,6 +4,50 @@
 
 AxLang is a statically checked, standard-library-only Go compiler for Astrix Control Language (`.ax`) files. It provides source diagnostics, canonical formatting, a JSON execution-plan target, an OPA Rego v1 policy target, and a JSON-RPC Language Server Protocol server.
 
+## Quick start with Astrix
+
+AxLang compiles and validates `Astrixfile.ax`; Astrix consumes the resulting policy and runs project verification. See the [Astrix quick start](https://github.com/vivek5200/astrix#quick-start) for full examples and configuration details.
+
+### A. Install Astrix with one command
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/vivek5200/astrix/main/install.sh | sh -s -- --bin-dir "$HOME/.local/bin"
+```
+
+This installs Astrix and its daemon. Install `axc` separately when you want to check or format `.ax` files.
+
+### B. Initialize and verify a project
+
+```sh
+astrix init && astrix verify
+```
+
+`astrix init` creates a starter `Astrixfile.ax`; it does not overwrite an existing file. The Astrix CLI can use that configuration without a separate `axc` executable. Install AxLang below to run `axc check Astrixfile.ax` yourself.
+
+### C. Use the composite GitHub Action
+
+In a workflow, use a published Astrix release tag that contains the action. Replace both placeholders with the same tag to pin the action code and installed CLI:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: vivek5200/astrix@<release-tag>
+  with:
+    version: <release-tag>
+    command: verify
+```
+
+The Action installs both Astrix and `axc`, validates the config, and runs the requested command. Use `command: init` to generate a config before a later verification run.
+
+### D. Install both tools with Go and print MCP setup
+
+```sh
+go install github.com/vivek5200/astrix/cmd/astrix@latest
+go install github.com/vivek5200/axlang/cmd/axc@latest
+astrix mcp config
+```
+
+The last command prints setup snippets for Claude Code, Cursor, and VS Code. The MCP server runs with `astrix mcp serve`; keep the Astrix binary on the MCP client's `PATH`.
+
 ## Install
 
 Requires Go 1.23 or newer.
